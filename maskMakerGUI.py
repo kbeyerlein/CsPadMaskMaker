@@ -78,6 +78,7 @@ class Application:
 
         self.unbonded_pixels = unbonded_pixels()
         self.asic_edges      = asic_edges()
+        self.mask_clicked    = np.ones_like(self.mask)
 
         self.initUI()
 
@@ -151,7 +152,10 @@ class Application:
         ij_label = QtGui.QLabel()
         disp = 'ss fs {0:5} {1:5}   value {2:6}'.format('-', '-', '-')
         ij_label.setText(disp)
-        self.plot.scene.sigMouseMoved.connect( lambda x: self.mouseMoved(ij_label, self.cspad, self.plot, x) )
+        self.plot.scene.sigMouseMoved.connect( lambda pos: self.mouseMoved(ij_label, self.cspad, self.plot, pos) )
+
+        # mouse click
+        self.plot.scene.sigMouseClicked.connect( lambda click: self.mouseClicked(self.plot, click) )
 
         ## Create a grid layout to manage the widgets size and position
         layout = QtGui.QGridLayout()
@@ -180,6 +184,15 @@ class Application:
         if (0 <= ij[0] < cspad.shape[0]) and (0 <= ij[1] < cspad.shape[1]):
             ij_label.setText('ss fs value: ' + str(ij[0]).rjust(5) + str(ij[1]).rjust(5) + str(cspad[ij[0], ij[1]]).rjust(8) )
 
+    def mouseClicked(self, plot, click):
+        if click.button() == 1:
+            img = plot.getImageItem()
+            ij = [cspad.shape[0] - 1 - int(img.mapFromScene(click.pos()).y()), int(img.mapFromScene(click.pos()).x())] # ss, fs
+            if (0 <= ij[0] < cspad.shape[0]) and (0 <= ij[1] < cspad.shape[1]):
+                self.mask_clicked[ij[0], ij[1]] = ~self.mask_clicked[ij[0], ij[1]]
+                self.mask[ij[0], ij[1]] = ~self.mask[ij[0], ij[1]]
+            self.updateDisplayRGB()
+
 if __name__ == '__main__':
     args = parse_cmdline_args()
 
@@ -188,3 +201,12 @@ if __name__ == '__main__':
     
     # start the gui
     Application(cspad)
+
+    """
+    app = QtGui.QApplication([])
+
+    ## Define a top-level widget to hold everything
+    w = QtGui.QWidget()
+
+    plot = pg.ImageView()
+    """
