@@ -114,16 +114,17 @@ class Application:
         else :
             trans      = np.fliplr(self.cspad.T)
             trans_mask = np.fliplr(self.mask.T)
-        cspad_max  = self.cspad.max()
+        self.cspad_max  = self.cspad.max()
 
         # convert to RGB
         # Set masked pixels to B
         display_data = np.zeros((trans.shape[0], trans.shape[1], 3), dtype = self.cspad.dtype)
         display_data[:, :, 0] = trans * trans_mask
         display_data[:, :, 1] = trans * trans_mask
-        display_data[:, :, 2] = trans + (cspad_max - trans) * ~trans_mask
+        display_data[:, :, 2] = trans + (self.cspad_max - trans) * ~trans_mask
         
-        self.plot.setImage(display_data, autoRange = False, autoLevels = False, autoHistogramRange = False)
+        self.display_RGB = display_data
+        self.plot.setImage(self.display_RGB, autoRange = False, autoLevels = False, autoHistogramRange = False)
 
     def generate_mask(self):
         self.mask.fill(1)
@@ -133,6 +134,8 @@ class Application:
 
         if self.mask_edges :
             self.mask *= self.asic_edges
+
+        self.mask *= self.mask_clicked
 
     def update_mask_unbonded(self, state):
         if state > 0 :
@@ -217,21 +220,37 @@ class Application:
         if click.button() == 1:
             img = plot.getImageItem()
             if self.geom_fnam is not None :
-                ij = [self.cspad_shape[0] - 1 - int(img.mapFromScene(click.pos()).y()), int(img.mapFromScene(click.pos()).x())] # ss, fs
-                if (0 <= ij[0] < self.cspad_shape[0]) and (0 <= ij[1] < self.cspad_shape[1]):
-                    i = self.ss_geom[ij[0], ij[1]]
-                    j = self.fs_geom[ij[0], ij[1]]
-                    if i == 0 and j == 0 and ij[0] != 0 and ij[1] != 0 :
-                        pass
+                i0 = int(img.mapFromScene(click.pos()).y())
+                j0 = int(img.mapFromScene(click.pos()).x())
+                i1 = self.cspad_shape[0] - 1 - i0 # array ss (with the fliplr and .T)
+                j1 = j0                           # array fs (with the fliplr and .T)
+                if (0 <= i1 < self.cspad_shape[0]) and (0 <= j1 < self.cspad_shape[1]):
+                    i = self.ss_geom[i1, j1]  # un-geometry corrected ss
+                    j = self.fs_geom[i1, j1]  # un-geometry corrected fs
+                    if i == 0 and j == 0 and i1 != 0 and j1 != 0 :
+                        return 
                     else :
                         self.mask_clicked[i, j] = ~self.mask_clicked[i, j]
                         self.mask[i, j]         = ~self.mask[i, j]
+
+                        if self.mask[i, j] :
+                            self.display_RGB[j0, i0, :] = np.array([1,1,1]) * self.cspad[i, j]
+                        else :
+                            self.display_RGB[j0, i0, :] = np.array([0,0,1]) * self.cspad_max
             else :
-                ij = [cspad.shape[0] - 1 - int(img.mapFromScene(click.pos()).y()), int(img.mapFromScene(click.pos()).x())] # ss, fs
-                if (0 <= ij[0] < cspad.shape[0]) and (0 <= ij[1] < cspad.shape[1]):
-                    self.mask_clicked[ij[0], ij[1]] = ~self.mask_clicked[ij[0], ij[1]]
-                    self.mask[ij[0], ij[1]]         = ~self.mask[ij[0], ij[1]]
-            self.updateDisplayRGB()
+                i0 = int(img.mapFromScene(click.pos()).y())
+                j0 = int(img.mapFromScene(click.pos()).x())
+                i1 = self.cspad.shape[0] - 1 - i0 # array ss (with the fliplr and .T)
+                j1 = j0                           # array fs (with the fliplr and .T)
+                if (0 <= i1 < cspad.shape[0]) and (0 <= j1 < cspad.shape[1]):
+                    self.mask_clicked[i1, j1] = ~self.mask_clicked[i1, j1]
+                    self.mask[i1, j1]         = ~self.mask[i1, j1]
+                    if self.mask[i1, j1] :
+                        self.display_RGB[j0, i0, :] = np.array([1,1,1]) * self.cspad[i1, j1]
+                    else :
+                        self.display_RGB[j0, i0, :] = np.array([0,0,1]) * self.cspad_max
+            
+            self.plot.setImage(self.display_RGB, autoRange = False, autoLevels = False, autoHistogramRange = False)
 
 if __name__ == '__main__':
     args = parse_cmdline_args()
