@@ -13,14 +13,16 @@ from PyQt4 import QtGui
 import pyqtgraph as pg
 import numpy as np
 import scipy
+import geometry_funcs as gf
 
 cspad_psana_shape = (4, 8, 185, 388)
 cspad_geom_shape  = (1480, 1552)
 
 def parse_cmdline_args():
     parser = argparse.ArgumentParser(description='CsPadMaskMaker - mask making, but with a mouse!')
-    parser.add_argument('cspad_fnam', type=str, help="filename for the hdf5 cspad image file.")
-    parser.add_argument('h5path', type=str, help="hdf5 path for the 2D cspad data.")
+    parser.add_argument('cspad_fnam', type=str, help="filename for the hdf5 cspad image file")
+    parser.add_argument('h5path', type=str, help="hdf5 path for the 2D cspad data")
+    parser.add_argument('-g', '--geometry', type=str, help="path to the CrystFEL geometry file for the image")
     return parser.parse_args()
     
 def unbonded_pixels():
@@ -69,9 +71,20 @@ def asic_edges():
 
 
 class Application:
-    def __init__(self, cspad):
+    def __init__(self, cspad, geom_fnam = None):
         self.cspad = cspad
         self.mask  = np.ones_like(cspad, dtype=np.bool)
+        self.geom_fnam = geom_fnam
+
+        if self.geom_fnam is not None :
+            self.pixel_maps, self.cspad_shape = gf.get_ij_slab_shaped(self.geom_fnam)
+            i, j = np.meshgrid(range(cspad.shape[0]), range(cspad.shape[1]), indexing='ij')
+            self.ss_geom = gf.apply_geom(self.geom_fnam, i)
+            self.fs_geom = gf.apply_geom(self.geom_fnam, j)
+            self.cspad_geom = np.zeros(self.cspad_shape, dtype=cspad.dtype)
+            self.mask_geom  = np.zeros(self.cspad_shape, dtype=np.bool)
+            #
+            self.background = np.where(np.fliplr(gf.apply_geom(self.geom_fnam, np.ones_like(self.mask)).astype(np.bool).T) == False)
 
         self.mask_edges = False
         self.mask_unbonded = False
@@ -88,8 +101,17 @@ class Application:
         with masked pixels shown in blue at the maximum value of the cspad. 
         This ensures that the masked pixels are shown at full brightness.
         """
-        trans      = np.fliplr(self.cspad.T)
-        trans_mask = np.fliplr(self.mask.T)
+        if self.geom_fnam is not None :
+            self.cspad_geom[self.pixel_maps[0], self.pixel_maps[1]] = self.cspad.ravel()
+            self.mask_geom[self.pixel_maps[0], self.pixel_maps[1]]  = self.mask.ravel()
+            trans      = np.fliplr(self.cspad_geom.T)
+            trans_mask = np.fliplr(self.mask_geom.T) 
+            #
+            # I need to make the mask True between the asics...
+            trans_mask[self.background] = True
+        else :
+            trans      = np.fliplr(self.cspad.T)
+            trans_mask = np.fliplr(self.mask.T)
         cspad_max  = self.cspad.max()
 
         # convert to RGB
@@ -170,7 +192,7 @@ class Application:
         layout.setColumnMinimumWidth(0, 200)
         
         # display the image
-        self.plot.setImage(np.fliplr(self.cspad.T))
+        self.updateDisplayRGB()
 
         ## Display the widget as a new window
         w.show()
@@ -180,17 +202,33 @@ class Application:
     
     def mouseMoved(self, ij_label, cspad, plot, pos):
         img = plot.getImageItem()
-        ij = [cspad.shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
-        if (0 <= ij[0] < cspad.shape[0]) and (0 <= ij[1] < cspad.shape[1]):
-            ij_label.setText('ss fs value: ' + str(ij[0]).rjust(5) + str(ij[1]).rjust(5) + str(cspad[ij[0], ij[1]]).rjust(8) )
+        if self.cspad_geom is not None :
+            ij = [self.cspad_shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
+            if (0 <= ij[0] < self.cspad_shape[0]) and (0 <= ij[1] < self.cspad_shape[1]):
+                ij_label.setText('ss fs value: ' + str(self.ss_geom[ij[0], ij[1]]).rjust(5) + str(self.fs_geom[ij[0], ij[1]]).rjust(5) + str(cspad[ij[0], ij[1]]).rjust(8) )
+        else :
+            ij = [cspad.shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
+            if (0 <= ij[0] < cspad.shape[0]) and (0 <= ij[1] < cspad.shape[1]):
+                ij_label.setText('ss fs value: ' + str(ij[0]).rjust(5) + str(ij[1]).rjust(5) + str(cspad[ij[0], ij[1]]).rjust(8) )
 
     def mouseClicked(self, plot, click):
         if click.button() == 1:
             img = plot.getImageItem()
-            ij = [cspad.shape[0] - 1 - int(img.mapFromScene(click.pos()).y()), int(img.mapFromScene(click.pos()).x())] # ss, fs
-            if (0 <= ij[0] < cspad.shape[0]) and (0 <= ij[1] < cspad.shape[1]):
-                self.mask_clicked[ij[0], ij[1]] = ~self.mask_clicked[ij[0], ij[1]]
-                self.mask[ij[0], ij[1]] = ~self.mask[ij[0], ij[1]]
+            if self.cspad_geom is not None :
+                ij = [self.cspad_shape[0] - 1 - int(img.mapFromScene(click.pos()).y()), int(img.mapFromScene(click.pos()).x())] # ss, fs
+                if (0 <= ij[0] < self.cspad_shape[0]) and (0 <= ij[1] < self.cspad_shape[1]):
+                    i = self.ss_geom[ij[0], ij[1]]
+                    j = self.fs_geom[ij[0], ij[1]]
+                    if i == 0 and j == 0 and ij[0] != 0 and ij[1] != 0 :
+                        pass
+                    else :
+                        self.mask_clicked[i, j] = ~self.mask_clicked[i, j]
+                        self.mask[i, j]         = ~self.mask[i, j]
+            else :
+                ij = [cspad.shape[0] - 1 - int(img.mapFromScene(click.pos()).y()), int(img.mapFromScene(click.pos()).x())] # ss, fs
+                if (0 <= ij[0] < cspad.shape[0]) and (0 <= ij[1] < cspad.shape[1]):
+                    self.mask_clicked[ij[0], ij[1]] = ~self.mask_clicked[ij[0], ij[1]]
+                    self.mask[ij[0], ij[1]]         = ~self.mask[ij[0], ij[1]]
             self.updateDisplayRGB()
 
 if __name__ == '__main__':
@@ -198,9 +236,9 @@ if __name__ == '__main__':
 
     # load the image
     cspad = h5py.File(args.cspad_fnam, 'r')[args.h5path].value
-    
+
     # start the gui
-    Application(cspad)
+    Application(cspad, geom_fnam = args.geometry)
 
     """
     app = QtGui.QApplication([])
