@@ -97,7 +97,7 @@ class Application:
 
         self.initUI()
 
-    def updateDisplayRGB(self):
+    def updateDisplayRGB(self, auto = False):
         """
         Make an RGB image (N, M, 3) (pyqt will interprate this as RGB automatically)
         with masked pixels shown in blue at the maximum value of the cspad. 
@@ -124,7 +124,10 @@ class Application:
         display_data[:, :, 2] = trans + (self.cspad_max - trans) * ~trans_mask
         
         self.display_RGB = display_data
-        self.plot.setImage(self.display_RGB, autoRange = False, autoLevels = False, autoHistogramRange = False)
+        if auto :
+            self.plot.setImage(self.display_RGB)
+        else :
+            self.plot.setImage(self.display_RGB, autoRange = False, autoLevels = False, autoHistogramRange = False)
 
     def generate_mask(self):
         self.mask.fill(1)
@@ -215,7 +218,7 @@ class Application:
         layout.setColumnMinimumWidth(0, 200)
         
         # display the image
-        self.updateDisplayRGB()
+        self.updateDisplayRGB(auto = True)
 
         ## Display the widget as a new window
         w.show()
