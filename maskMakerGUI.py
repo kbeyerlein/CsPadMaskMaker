@@ -174,7 +174,7 @@ class Application:
         ij_label = QtGui.QLabel()
         disp = 'ss fs {0:5} {1:5}   value {2:6}'.format('-', '-', '-')
         ij_label.setText(disp)
-        self.plot.scene.sigMouseMoved.connect( lambda pos: self.mouseMoved(ij_label, self.cspad, self.plot, pos) )
+        self.plot.scene.sigMouseMoved.connect( lambda pos: self.mouseMoved(ij_label, pos) )
 
         # mouse click
         self.plot.scene.sigMouseClicked.connect( lambda click: self.mouseClicked(self.plot, click) )
@@ -200,16 +200,16 @@ class Application:
         ## Start the Qt event loop
         app.exec_()
     
-    def mouseMoved(self, ij_label, cspad, plot, pos):
-        img = plot.getImageItem()
+    def mouseMoved(self, ij_label, pos):
+        img = self.plot.getImageItem()
         if self.cspad_geom is not None :
             ij = [self.cspad_shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
             if (0 <= ij[0] < self.cspad_shape[0]) and (0 <= ij[1] < self.cspad_shape[1]):
-                ij_label.setText('ss fs value: ' + str(self.ss_geom[ij[0], ij[1]]).rjust(5) + str(self.fs_geom[ij[0], ij[1]]).rjust(5) + str(cspad[ij[0], ij[1]]).rjust(8) )
+                ij_label.setText('ss fs value: ' + str(self.ss_geom[ij[0], ij[1]]).rjust(5) + str(self.fs_geom[ij[0], ij[1]]).rjust(5) + str(self.cspad_geom[ij[0], ij[1]]).rjust(8) )
         else :
-            ij = [cspad.shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
-            if (0 <= ij[0] < cspad.shape[0]) and (0 <= ij[1] < cspad.shape[1]):
-                ij_label.setText('ss fs value: ' + str(ij[0]).rjust(5) + str(ij[1]).rjust(5) + str(cspad[ij[0], ij[1]]).rjust(8) )
+            ij = [self.cspad.shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
+            if (0 <= ij[0] < self.cspad.shape[0]) and (0 <= ij[1] < self.cspad.shape[1]):
+                ij_label.setText('ss fs value: ' + str(ij[0]).rjust(5) + str(ij[1]).rjust(5) + str(self.cspad[ij[0], ij[1]]).rjust(8) )
 
     def mouseClicked(self, plot, click):
         if click.button() == 1:
