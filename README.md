@@ -20,3 +20,17 @@ optional arguments:
   -mp MASK_H5PATH, --mask_h5path MASK_H5PATH
                         path inside the h5file of the starting mask
 ```
+
+### Requires
+- python (probably >= 2.7)
+- h5py 
+- pyqtgraph
+- scipy
+- numpy
+
+
+### Example
+```
+python maskMakerGUI.py example/LA93-r0014-CxiDs1-darkcal.h5 data/data -g example/cspad-cxib2313-v9.geom
+```
+
