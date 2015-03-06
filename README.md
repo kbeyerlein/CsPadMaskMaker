@@ -1,6 +1,7 @@
 # CsPadMaskMaker
 graphical interface for making a pixel mask of the cspad
 
+```
 $ python maskMakerGUI.py -h
 usage: maskMakerGUI.py [-h] [-g GEOMETRY] [-m MASK] [-mp MASK_H5PATH]
                        cspad_fnam h5path
@@ -18,3 +19,4 @@ optional arguments:
   -m MASK, --mask MASK  path to the h5file of the starting mask
   -mp MASK_H5PATH, --mask_h5path MASK_H5PATH
                         path inside the h5file of the starting mask
+```
