@@ -158,22 +158,39 @@ class Application:
         
         self.generate_mask()
         self.updateDisplayRGB()
+
+    def save_mask(self):
+        print 'updating mask...'
+        self.generate_mask()
+        
+        print 'outputing mask as np.int16 (h5py does not support boolian arrays yet)...'
+        f = h5py.File('mask.h5', 'w')
+        f.create_dataset('/data/data', data = self.mask.astype(np.int16))
+        f.close()
+        print 'Done!'
+        
     
     def initUI(self):
-        ## Always start by initializing Qt (only once per application)
+        # Always start by initializing Qt (only once per application)
         app = QtGui.QApplication([])
 
-        ## Define a top-level widget to hold everything
+        # Define a top-level widget to hold everything
         w = QtGui.QWidget()
 
+        # 2D plot for the cspad and mask
         self.plot = pg.ImageView()
 
-        ## Create some widgets to be placed inside
+        # unbonded pixels checkbox
         unbonded_checkbox = QtGui.QCheckBox('unbonded pixels')
         unbonded_checkbox.stateChanged.connect( self.update_mask_unbonded )
 
+        # asic edges checkbox
         edges_checkbox = QtGui.QCheckBox('asic edges')
         edges_checkbox.stateChanged.connect( self.update_mask_edges )
+
+        # save mask button
+        save_button = QtGui.QPushButton('save mask')
+        save_button.clicked.connect(self.save_mask)
 
         # mouse hover ij value label
         ij_label = QtGui.QLabel()
@@ -181,18 +198,19 @@ class Application:
         ij_label.setText(disp)
         self.plot.scene.sigMouseMoved.connect( lambda pos: self.mouseMoved(ij_label, pos) )
 
-        # mouse click
+        # mouse click mask 
         self.plot.scene.sigMouseClicked.connect( lambda click: self.mouseClicked(self.plot, click) )
 
-        ## Create a grid layout to manage the widgets size and position
+        # Create a grid layout to manage the widgets size and position
         layout = QtGui.QGridLayout()
         w.setLayout(layout)
 
         ## Add widgets to the layout in their proper positions
-        layout.addWidget(ij_label, 0, 0)                # upper-left
-        layout.addWidget(unbonded_checkbox, 1, 0)       # middle-left
-        layout.addWidget(edges_checkbox, 2, 0)          # bottom-left
-        layout.addWidget(self.plot, 0, 1, 3, 1)         # plot goes on right side, spanning 3 rows
+        layout.addWidget(save_button, 0, 0)                # upper-left
+        layout.addWidget(ij_label, 1, 0)                # upper-left
+        layout.addWidget(unbonded_checkbox, 2, 0)       # middle-left
+        layout.addWidget(edges_checkbox, 3, 0)          # bottom-left
+        layout.addWidget(self.plot, 0, 1, 4, 1)         # plot goes on right side, spanning 3 rows
         layout.setColumnStretch(1, 1)
         layout.setColumnMinimumWidth(0, 200)
         
@@ -256,7 +274,9 @@ if __name__ == '__main__':
     args = parse_cmdline_args()
 
     # load the image
-    cspad = h5py.File(args.cspad_fnam, 'r')[args.h5path].value
+    f = h5py.File(args.cspad_fnam, 'r')
+    cspad = f[args.h5path].value
+    f.close()
 
     # start the gui
     Application(cspad, geom_fnam = args.geometry)
