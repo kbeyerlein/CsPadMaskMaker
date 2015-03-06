@@ -22,11 +22,11 @@ optional arguments:
 ```
 
 ### Requires
-python (probably >= 2.7)
-h5py 
-pyqtgraph
-scipy
-numpy
+- python (probably >= 2.7)
+- h5py 
+- pyqtgraph
+- scipy
+- numpy
 
 
 ### Example
