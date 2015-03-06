@@ -56,18 +56,20 @@ def unbonded_pixels():
     mask_slab = ijkl_to_ss_fs(mask)
 
     import scipy.signal
-    mask_pad = scipy.signal.convolve(1 - mask_slab.astype(np.float), np.ones((3, 3), dtype=np.float), mode = 'same') < 1
+    kernal = np.array([ [0,1,0], [1,1,1], [0,1,0] ], dtype=np.float)
+    mask_pad = scipy.signal.convolve(1 - mask_slab.astype(np.float), kernal, mode = 'same') < 1
     return mask_pad
 
-def asic_edges():
+def asic_edges(pad = 0):
     mask_edges = np.ones(cspad_geom_shape)
     mask_edges[:: 185, :] = 0
-    mask_edges[-1, :] = 0
+    mask_edges[184 :: 185, :] = 0
     mask_edges[:, :: 194] = 0
-    mask_edges[:, -1] = 0
+    mask_edges[:, 193 :: 194] = 0
 
-    mask_edges_pad = scipy.signal.convolve(1 - mask_edges.astype(np.float), np.ones((8, 8), dtype=np.float), mode = 'same') < 1
-    return mask_edges_pad
+    if pad != 0 :
+        mask_edges = scipy.signal.convolve(1 - mask_edges.astype(np.float), np.ones((pad, pad), dtype=np.float), mode = 'same') < 1
+    return mask_edges
 
 
 class Application:
@@ -202,7 +204,7 @@ class Application:
     
     def mouseMoved(self, ij_label, pos):
         img = self.plot.getImageItem()
-        if self.cspad_geom is not None :
+        if self.geom_fnam is not None :
             ij = [self.cspad_shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
             if (0 <= ij[0] < self.cspad_shape[0]) and (0 <= ij[1] < self.cspad_shape[1]):
                 ij_label.setText('ss fs value: ' + str(self.ss_geom[ij[0], ij[1]]).rjust(5) + str(self.fs_geom[ij[0], ij[1]]).rjust(5) + str(self.cspad_geom[ij[0], ij[1]]).rjust(8) )
@@ -214,7 +216,7 @@ class Application:
     def mouseClicked(self, plot, click):
         if click.button() == 1:
             img = plot.getImageItem()
-            if self.cspad_geom is not None :
+            if self.geom_fnam is not None :
                 ij = [self.cspad_shape[0] - 1 - int(img.mapFromScene(click.pos()).y()), int(img.mapFromScene(click.pos()).x())] # ss, fs
                 if (0 <= ij[0] < self.cspad_shape[0]) and (0 <= ij[1] < self.cspad_shape[1]):
                     i = self.ss_geom[ij[0], ij[1]]
