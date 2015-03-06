@@ -209,7 +209,6 @@ class Application:
                 print 'ROI out of bounds...'
 
     def mask_ROI_circle(self, roi):
-        print roi.pos(), roi.size()
         i0, j0 = np.meshgrid(range(int(roi.size()[0])), range(int(roi.size()[1])), indexing = 'ij')
         r = np.sqrt((i0 - roi.size()[0]/2).astype(np.float)**2 + (j0 - roi.size()[0]/2).astype(np.float)**2)
         i0 = np.rint(i0[np.where(r < roi.size()[1]/2.)] + roi.pos()[1]).astype(np.int)
@@ -217,8 +216,8 @@ class Application:
 
         # I just know there is a more sensible approach here...
         if self.geom_fnam is not None :
-            i1 = np.rint(self.cspad_shape[0] - 1 - j0).astype(np.int) # array ss (with the fliplr and .T)
-            j1 = np.rint(i0).astype(np.int)                           # array fs (with the fliplr and .T)
+            i1 = np.rint(self.cspad_shape[0] - 1 - i0).astype(np.int) # array ss (with the fliplr and .T)
+            j1 = np.rint(j0).astype(np.int)                           # array fs (with the fliplr and .T)
         
             # check if the ROI is in the boundary of the image
             if (0 <= i1.max() < self.ss_geom.shape[0]) and (0 <= i1.min() < self.ss_geom.shape[0]) :
