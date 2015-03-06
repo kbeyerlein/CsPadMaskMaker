@@ -18,13 +18,6 @@ import geometry_funcs as gf
 cspad_psana_shape = (4, 8, 185, 388)
 cspad_geom_shape  = (1480, 1552)
 
-def parse_cmdline_args():
-    parser = argparse.ArgumentParser(description='CsPadMaskMaker - mask making, but with a mouse!')
-    parser.add_argument('cspad_fnam', type=str, help="filename for the hdf5 cspad image file")
-    parser.add_argument('h5path', type=str, help="hdf5 path for the 2D cspad data")
-    parser.add_argument('-g', '--geometry', type=str, help="path to the CrystFEL geometry file for the image")
-    return parser.parse_args()
-    
 def unbonded_pixels():
     def ijkl_to_ss_fs(cspad_ijkl):
         """ 
@@ -73,7 +66,7 @@ def asic_edges(pad = 0):
 
 
 class Application:
-    def __init__(self, cspad, geom_fnam = None):
+    def __init__(self, cspad, geom_fnam = None, mask = None):
         self.cspad = cspad
         self.mask  = np.ones_like(cspad, dtype=np.bool)
         self.geom_fnam = geom_fnam
@@ -88,12 +81,15 @@ class Application:
             #
             self.background = np.where(np.fliplr(gf.apply_geom(self.geom_fnam, np.ones_like(self.mask)).astype(np.bool).T) == False)
 
-        self.mask_edges = False
+        self.mask_edges    = False
         self.mask_unbonded = False
 
         self.unbonded_pixels = unbonded_pixels()
         self.asic_edges      = asic_edges()
-        self.mask_clicked    = np.ones_like(self.mask)
+        if mask is not None :
+            self.mask_clicked  = mask
+        else :
+            self.mask_clicked  = np.ones_like(self.mask)
 
         self.initUI()
 
@@ -218,6 +214,7 @@ class Application:
         layout.setColumnMinimumWidth(0, 200)
         
         # display the image
+        self.generate_mask()
         self.updateDisplayRGB(auto = True)
 
         ## Display the widget as a new window
@@ -253,7 +250,7 @@ class Application:
                     else :
                         self.mask_clicked[i, j] = ~self.mask_clicked[i, j]
                         self.mask[i, j]         = ~self.mask[i, j]
-
+                        
                         if self.mask[i, j] :
                             self.display_RGB[j0, i0, :] = np.array([1,1,1]) * self.cspad[i, j]
                         else :
@@ -273,6 +270,15 @@ class Application:
             
             self.plot.setImage(self.display_RGB, autoRange = False, autoLevels = False, autoHistogramRange = False)
 
+def parse_cmdline_args():
+    parser = argparse.ArgumentParser(description='CsPadMaskMaker - mask making, but with a mouse!')
+    parser.add_argument('cspad_fnam', type=str, help="filename for the hdf5 cspad image file")
+    parser.add_argument('h5path', type=str, help="hdf5 path for the 2D cspad data")
+    parser.add_argument('-g', '--geometry', type=str, help="path to the CrystFEL geometry file for the image")
+    parser.add_argument('-m', '--mask', type=str, help="path to the h5file of the starting mask")
+    parser.add_argument('-mp', '--mask_h5path', type=str, help="path inside the h5file of the starting mask")
+    return parser.parse_args()
+    
 if __name__ == '__main__':
     args = parse_cmdline_args()
 
@@ -281,14 +287,18 @@ if __name__ == '__main__':
     cspad = f[args.h5path].value
     f.close()
 
+    # load the predefined mask
+    if args.mask is not None :
+        if args.mask_h5path is not None :
+            path = args.mask_h5path
+        else :
+            path = '/data/data'
+        f = h5py.File(args.mask, 'r')
+        mask = f[path].value
+        f.close()
+    else :
+        mask = None
+
     # start the gui
-    Application(cspad, geom_fnam = args.geometry)
+    Application(cspad, geom_fnam = args.geometry, mask = mask)
 
-    """
-    app = QtGui.QApplication([])
-
-    ## Define a top-level widget to hold everything
-    w = QtGui.QWidget()
-
-    plot = pg.ImageView()
-    """
