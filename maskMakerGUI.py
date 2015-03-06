@@ -168,6 +168,89 @@ class Application:
         f.close()
         print 'Done!'
         
+    def mask_ROI(self, roi):
+        a = roi.getArrayRegion(self.display_RGB[:,:,0], self.plot.getImageItem(), returnMappedCoords=True)
+        
+        # I just know there is a more sensible approach here...
+        if self.geom_fnam is not None :
+            i1 = np.rint(self.cspad_shape[0] - 1 - a[1][1]).astype(np.int) # array ss (with the fliplr and .T)
+            j1 = np.rint(a[1][0]).astype(np.int)                           # array fs (with the fliplr and .T)
+        
+            # check if the ROI is in the boundary of the image
+            if (0 <= i1.max() < self.ss_geom.shape[0]) and (0 <= i1.min() < self.ss_geom.shape[0]) :
+                if (0 <= j1.max() < self.ss_geom.shape[1]) and (0 <= j1.min() < self.ss_geom.shape[1]) :
+                    i2 = self.ss_geom[i1, j1]
+                    j2 = self.fs_geom[i1, j1]
+                    
+                    # save the 0,0 pixel state
+                    m = self.mask_clicked[0, 0]
+                    self.mask_clicked[i2, j2] = False
+                    self.mask_clicked[0, 0]   = m
+                    
+                    self.generate_mask()
+                    self.updateDisplayRGB()
+                else :
+                    print 'ROI out of bounds...'
+            else :
+                print 'ROI out of bounds...'
+        else :
+            i1 = np.rint(self.cspad.shape[0] - 1 - a[1][1]).astype(np.int) # array ss (with the fliplr and .T)
+            j1 = np.rint(a[1][0]).astype(np.int)                           # array fs (with the fliplr and .T)
+            if (0 <= i1.max() < self.mask_clicked.shape[0]) and (0 <= i1.min() < self.mask_clicked.shape[0]) :
+                if (0 <= j1.max() < self.mask_clicked.shape[1]) and (0 <= j1.min() < self.mask_clicked.shape[1]) :
+                    # save the 0,0 pixel state
+                    self.mask_clicked[i1, j1] = False
+
+                    self.generate_mask()
+                    self.updateDisplayRGB()
+                else :
+                    print 'ROI out of bounds...'
+            else :
+                print 'ROI out of bounds...'
+
+    def mask_ROI_circle(self, roi):
+        print roi.pos(), roi.size()
+        i0, j0 = np.meshgrid(range(int(roi.size()[0])), range(int(roi.size()[1])), indexing = 'ij')
+        r = np.sqrt((i0 - roi.size()[0]/2).astype(np.float)**2 + (j0 - roi.size()[0]/2).astype(np.float)**2)
+        i0 = np.rint(i0[np.where(r < roi.size()[1]/2.)] + roi.pos()[1]).astype(np.int)
+        j0 = np.rint(j0[np.where(r < roi.size()[0]/2.)] + roi.pos()[0]).astype(np.int)
+
+        # I just know there is a more sensible approach here...
+        if self.geom_fnam is not None :
+            i1 = np.rint(self.cspad_shape[0] - 1 - j0).astype(np.int) # array ss (with the fliplr and .T)
+            j1 = np.rint(i0).astype(np.int)                           # array fs (with the fliplr and .T)
+        
+            # check if the ROI is in the boundary of the image
+            if (0 <= i1.max() < self.ss_geom.shape[0]) and (0 <= i1.min() < self.ss_geom.shape[0]) :
+                if (0 <= j1.max() < self.ss_geom.shape[1]) and (0 <= j1.min() < self.ss_geom.shape[1]) :
+                    i2 = self.ss_geom[i1, j1]
+                    j2 = self.fs_geom[i1, j1]
+                    
+                    # save the 0,0 pixel state
+                    m = self.mask_clicked[0, 0]
+                    self.mask_clicked[i2, j2] = False
+                    self.mask_clicked[0, 0]   = m
+                    
+                    self.generate_mask()
+                    self.updateDisplayRGB()
+                else :
+                    print 'ROI out of bounds...'
+            else :
+                print 'ROI out of bounds...'
+        else :
+            i1 = np.rint(self.cspad.shape[0] - 1 - i0).astype(np.int) # array ss (with the fliplr and .T)
+            j1 = np.rint(j0).astype(np.int)                           # array fs (with the fliplr and .T)
+            if (0 <= i1.max() < self.mask_clicked.shape[0]) and (0 <= i1.min() < self.mask_clicked.shape[0]) :
+                if (0 <= j1.max() < self.mask_clicked.shape[1]) and (0 <= j1.min() < self.mask_clicked.shape[1]) :
+                    # save the 0,0 pixel state
+                    self.mask_clicked[i1, j1] = False
+
+                    self.generate_mask()
+                    self.updateDisplayRGB()
+                else :
+                    print 'ROI out of bounds...'
+            else :
+                print 'ROI out of bounds...'
     
     def initUI(self):
         # Always start by initializing Qt (only once per application)
@@ -178,6 +261,20 @@ class Application:
 
         # 2D plot for the cspad and mask
         self.plot = pg.ImageView()
+
+        # rectangular ROI selection
+        self.roi = pg.RectROI([-200,-200], [100, 100])
+        self.plot.addItem(self.roi)
+        self.roi.setZValue(10)                       # make sure ROI is drawn above image
+        ROI_button = QtGui.QPushButton('mask rectangular ROI')
+        ROI_button.clicked.connect(lambda : self.mask_ROI(self.roi))
+
+        # circular ROI selection
+        self.roi_circle = pg.CircleROI([-200,200], [100, 100])
+        self.plot.addItem(self.roi_circle)
+        self.roi.setZValue(10)                       # make sure ROI is drawn above image
+        ROI_circle_button = QtGui.QPushButton('mask circular ROI')
+        ROI_circle_button.clicked.connect(lambda : self.mask_ROI_circle(self.roi_circle))
 
         # unbonded pixels checkbox
         unbonded_checkbox = QtGui.QCheckBox('unbonded pixels')
@@ -206,10 +303,12 @@ class Application:
 
         ## Add widgets to the layout in their proper positions
         layout.addWidget(save_button, 0, 0)                # upper-left
-        layout.addWidget(ij_label, 1, 0)                # upper-left
-        layout.addWidget(unbonded_checkbox, 2, 0)       # middle-left
-        layout.addWidget(edges_checkbox, 3, 0)          # bottom-left
-        layout.addWidget(self.plot, 0, 1, 4, 1)         # plot goes on right side, spanning 3 rows
+        layout.addWidget(ROI_button, 1, 0)                # upper-left
+        layout.addWidget(ROI_circle_button, 2, 0)                # upper-left
+        layout.addWidget(ij_label, 3, 0)                # upper-left
+        layout.addWidget(unbonded_checkbox, 4, 0)       # middle-left
+        layout.addWidget(edges_checkbox, 5, 0)          # bottom-left
+        layout.addWidget(self.plot, 0, 1, 6, 1)         # plot goes on right side, spanning 3 rows
         layout.setColumnStretch(1, 1)
         layout.setColumnMinimumWidth(0, 200)
         
