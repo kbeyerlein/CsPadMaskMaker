@@ -1,11 +1,4 @@
 #!/usr/bin/env python
-"""
- Load a cspad image from the commandline arguement
- Show pixel location from the mouse position
- Show pixel value from the mouse position
- Clicking should add to the mask
- Some sort of ROI?
-"""
 
 import argparse
 import h5py
