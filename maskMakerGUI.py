@@ -251,6 +251,14 @@ class Application:
             else :
                 print 'ROI out of bounds...'
     
+    def mask_hist(self):
+        min_max = self.plot.getHistogramWidget().item.getLevels()
+        
+        self.mask_clicked[np.where(self.cspad < min_max[0])] = False
+        self.mask_clicked[np.where(self.cspad > min_max[1])] = False
+        self.generate_mask()
+        self.updateDisplayRGB()
+
     def initUI(self):
         # Always start by initializing Qt (only once per application)
         app = QtGui.QApplication([])
@@ -274,6 +282,10 @@ class Application:
         self.roi.setZValue(10)                       # make sure ROI is drawn above image
         ROI_circle_button = QtGui.QPushButton('mask circular ROI')
         ROI_circle_button.clicked.connect(lambda : self.mask_ROI_circle(self.roi_circle))
+
+        # histogram mask button
+        hist_button = QtGui.QPushButton('mask outside histogram')
+        hist_button.clicked.connect(self.mask_hist)
 
         # unbonded pixels checkbox
         unbonded_checkbox = QtGui.QCheckBox('unbonded pixels')
@@ -301,19 +313,28 @@ class Application:
         w.setLayout(layout)
 
         ## Add widgets to the layout in their proper positions
-        layout.addWidget(save_button, 0, 0)                # upper-left
-        layout.addWidget(ROI_button, 1, 0)                # upper-left
-        layout.addWidget(ROI_circle_button, 2, 0)                # upper-left
-        layout.addWidget(ij_label, 3, 0)                # upper-left
-        layout.addWidget(unbonded_checkbox, 4, 0)       # middle-left
-        layout.addWidget(edges_checkbox, 5, 0)          # bottom-left
-        layout.addWidget(self.plot, 0, 1, 6, 1)         # plot goes on right side, spanning 3 rows
+        layout.addWidget(save_button, 0, 0)             # upper-left
+        layout.addWidget(ROI_button, 1, 0)              # upper-left
+        layout.addWidget(ROI_circle_button, 2, 0)       # upper-left
+        layout.addWidget(hist_button, 3, 0)             # upper-left
+        layout.addWidget(ij_label, 4, 0)                # upper-left
+        layout.addWidget(unbonded_checkbox, 5, 0)       # middle-left
+        layout.addWidget(edges_checkbox, 6, 0)          # bottom-left
+        layout.addWidget(self.plot, 0, 1, 7, 1)         # plot goes on right side, spanning 3 rows
         layout.setColumnStretch(1, 1)
         layout.setColumnMinimumWidth(0, 200)
         
         # display the image
         self.generate_mask()
         self.updateDisplayRGB(auto = True)
+
+        """
+        def dump(obj):
+          for attr in dir(obj):
+            print "obj.%s = %s" % (attr, getattr(obj, attr))
+
+        dump(self.plot.getHistogramWidget())
+        """
 
         ## Display the widget as a new window
         w.show()
@@ -399,4 +420,9 @@ if __name__ == '__main__':
 
     # start the gui
     Application(cspad, geom_fnam = args.geometry, mask = mask)
+    """
+    ap = Application(cspad, geom_fnam = args.geometry, mask = mask)
+    """
+    
+
 
