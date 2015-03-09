@@ -46,7 +46,7 @@ def unbonded_pixels():
     mask_pad = scipy.signal.convolve(1 - mask_slab.astype(np.float), kernal, mode = 'same') < 1
     return mask_pad
 
-def asic_edges(pad = 0):
+def asic_edges(arrayin = None, pad = 0):
     mask_edges = np.ones(cspad_geom_shape)
     mask_edges[:: 185, :] = 0
     mask_edges[184 :: 185, :] = 0
@@ -57,6 +57,16 @@ def asic_edges(pad = 0):
         mask_edges = scipy.signal.convolve(1 - mask_edges.astype(np.float), np.ones((pad, pad), dtype=np.float), mode = 'same') < 1
     return mask_edges
 
+def edges(shape, pad = 0):
+    mask_edges = np.ones(shape)
+    mask_edges[0, :]  = 0
+    mask_edges[-1, :] = 0
+    mask_edges[:, 0]  = 0
+    mask_edges[:, -1] = 0
+
+    if pad != 0 :
+        mask_edges = scipy.signal.convolve(1 - mask_edges.astype(np.float), np.ones((pad, pad), dtype=np.float), mode = 'same') < 1
+    return mask_edges
 
 class Application:
     def __init__(self, cspad, geom_fnam = None, mask = None):
@@ -372,7 +382,7 @@ class Application:
                 j0 = int(img.mapFromScene(click.pos()).x())
                 i1 = self.cspad.shape[0] - 1 - i0 # array ss (with the fliplr and .T)
                 j1 = j0                           # array fs (with the fliplr and .T)
-                if (0 <= i1 < cspad.shape[0]) and (0 <= j1 < cspad.shape[1]):
+                if (0 <= i1 < self.cspad.shape[0]) and (0 <= j1 < self.cspad.shape[1]):
                     self.mask_clicked[i1, j1] = ~self.mask_clicked[i1, j1]
                     self.mask[i1, j1]         = ~self.mask[i1, j1]
                     if self.mask[i1, j1] :
