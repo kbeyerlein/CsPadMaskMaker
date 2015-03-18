@@ -34,3 +34,5 @@ optional arguments:
 ./maskMakerGUI.py example/LA93-r0014-CxiDs1-darkcal.h5 data/data -g example/cspad-cxib2313-v9.geom
 ```
 
+### Alternative
+SLAC has an alternative mask making GUI (which I have not tried yet) but it could be a better option if you have access https://confluence.slac.stanford.edu/display/PSDM/Mask+Editor.
