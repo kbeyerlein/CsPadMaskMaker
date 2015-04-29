@@ -194,85 +194,83 @@ class Application:
     def mask_ROI(self, roi):
         a = roi.getArrayRegion(self.display_RGB[:,:,0], self.plot.getImageItem(), returnMappedCoords=True)
         
-        # I just know there is a more sensible approach here...
         if self.geom_fnam is not None :
             i1 = np.rint(self.cspad_shape[0] - 1 - a[1][1]).astype(np.int) # array ss (with the fliplr and .T)
             j1 = np.rint(a[1][0]).astype(np.int)                           # array fs (with the fliplr and .T)
-        
-            # check if the ROI is in the boundary of the image
-            if (0 <= i1.max() < self.ss_geom.shape[0]) and (0 <= i1.min() < self.ss_geom.shape[0]) :
-                if (0 <= j1.max() < self.ss_geom.shape[1]) and (0 <= j1.min() < self.ss_geom.shape[1]) :
-                    i2 = self.ss_geom[i1, j1]
-                    j2 = self.fs_geom[i1, j1]
-                    
-                    # save the 0,0 pixel state
-                    m = self.mask_clicked[0, 0]
-                    self.mask_clicked[i2, j2] = False
-                    self.mask_clicked[0, 0]   = m
-                    
-                    self.generate_mask()
-                    self.updateDisplayRGB()
-                else :
-                    print 'ROI out of bounds...'
-            else :
-                print 'ROI out of bounds...'
+            
+            coords = np.array([i1.flatten(), j1.flatten()]).transpose()
+            coords = coords[
+                     (coords[:,0] >= 0) & 
+                     (coords[:,0] < self.ss_geom.shape[0]) & 
+                     (coords[:,1] >= 0) &
+                     (coords[:,1] < self.ss_geom.shape[1])]
+            
+            i2 = self.ss_geom[coords[:,0], coords[:,1]]
+            j2 = self.fs_geom[coords[:,0], coords[:,1]]
+            
+            m = self.mask_clicked[0, 0]
+            self.mask_clicked[i2, j2] = False
+            self.mask_clicked[0, 0] = m
+            
+            self.generate_mask()
+            self.updateDisplayRGB()
         else :
             i1 = np.rint(self.cspad.shape[0] - 1 - a[1][1]).astype(np.int) # array ss (with the fliplr and .T)
             j1 = np.rint(a[1][0]).astype(np.int)                           # array fs (with the fliplr and .T)
-            if (0 <= i1.max() < self.mask_clicked.shape[0]) and (0 <= i1.min() < self.mask_clicked.shape[0]) :
-                if (0 <= j1.max() < self.mask_clicked.shape[1]) and (0 <= j1.min() < self.mask_clicked.shape[1]) :
-                    # save the 0,0 pixel state
-                    self.mask_clicked[i1, j1] = False
-
-                    self.generate_mask()
-                    self.updateDisplayRGB()
-                else :
-                    print 'ROI out of bounds...'
-            else :
-                print 'ROI out of bounds...'
-
+            
+            coords = np.array([i1.flatten(), j1.flatten()]).transpose()
+            coords = coords[
+                     (coords[:,0] >= 0) & 
+                     (coords[:,0] < self.mask_clicked.shape[0]) & 
+                     (coords[:,1] >= 0) &
+                     (coords[:,1] < self.mask_clicked.shape[1])]
+            
+            self.mask_clicked[coords[:,0], coords[:,1]] = False
+            
+            self.generate_mask()
+            self.updateDisplayRGB()
+    
     def mask_ROI_circle(self, roi):
         i0, j0 = np.meshgrid(range(int(roi.size()[0])), range(int(roi.size()[1])), indexing = 'ij')
         r = np.sqrt((i0 - roi.size()[0]/2).astype(np.float)**2 + (j0 - roi.size()[0]/2).astype(np.float)**2)
         i0 = np.rint(i0[np.where(r < roi.size()[1]/2.)] + roi.pos()[1]).astype(np.int)
         j0 = np.rint(j0[np.where(r < roi.size()[0]/2.)] + roi.pos()[0]).astype(np.int)
 
-        # I just know there is a more sensible approach here...
         if self.geom_fnam is not None :
             i1 = np.rint(self.cspad_shape[0] - 1 - i0).astype(np.int) # array ss (with the fliplr and .T)
             j1 = np.rint(j0).astype(np.int)                           # array fs (with the fliplr and .T)
-        
-            # check if the ROI is in the boundary of the image
-            if (0 <= i1.max() < self.ss_geom.shape[0]) and (0 <= i1.min() < self.ss_geom.shape[0]) :
-                if (0 <= j1.max() < self.ss_geom.shape[1]) and (0 <= j1.min() < self.ss_geom.shape[1]) :
-                    i2 = self.ss_geom[i1, j1]
-                    j2 = self.fs_geom[i1, j1]
-                    
-                    # save the 0,0 pixel state
-                    m = self.mask_clicked[0, 0]
-                    self.mask_clicked[i2, j2] = False
-                    self.mask_clicked[0, 0]   = m
-                    
-                    self.generate_mask()
-                    self.updateDisplayRGB()
-                else :
-                    print 'ROI out of bounds...'
-            else :
-                print 'ROI out of bounds...'
+            
+            coords = np.array([i1.flatten(), j1.flatten()]).transpose()
+            coords = coords[
+                     (coords[:,0] >= 0) & 
+                     (coords[:,0] < self.ss_geom.shape[0]) & 
+                     (coords[:,1] >= 0) &
+                     (coords[:,1] < self.ss_geom.shape[1])]
+            
+            i2 = self.ss_geom[coords[:,0], coords[:,1]]
+            j2 = self.fs_geom[coords[:,0], coords[:,1]]
+            
+            m = self.mask_clicked[0, 0]
+            self.mask_clicked[i2, j2] = False
+            self.mask_clicked[0, 0] = m
+            
+            self.generate_mask()
+            self.updateDisplayRGB()
         else :
             i1 = np.rint(self.cspad.shape[0] - 1 - i0).astype(np.int) # array ss (with the fliplr and .T)
             j1 = np.rint(j0).astype(np.int)                           # array fs (with the fliplr and .T)
-            if (0 <= i1.max() < self.mask_clicked.shape[0]) and (0 <= i1.min() < self.mask_clicked.shape[0]) :
-                if (0 <= j1.max() < self.mask_clicked.shape[1]) and (0 <= j1.min() < self.mask_clicked.shape[1]) :
-                    # save the 0,0 pixel state
-                    self.mask_clicked[i1, j1] = False
-
-                    self.generate_mask()
-                    self.updateDisplayRGB()
-                else :
-                    print 'ROI out of bounds...'
-            else :
-                print 'ROI out of bounds...'
+            
+            coords = np.array([i1.flatten(), j1.flatten()]).transpose()
+            coords = coords[
+                     (coords[:,0] >= 0) & 
+                     (coords[:,0] < self.mask_clicked.shape[0]) & 
+                     (coords[:,1] >= 0) &
+                     (coords[:,1] < self.mask_clicked.shape[1])]
+            
+            self.mask_clicked[coords[:,0], coords[:,1]] = False
+            
+            self.generate_mask()
+            self.updateDisplayRGB()
     
     def mask_hist(self):
         min_max = self.plot.getHistogramWidget().item.getLevels()
