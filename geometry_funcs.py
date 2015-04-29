@@ -239,7 +239,7 @@ def ss_fs_to_ijkl(cspad_ij):
     ...           ...           ...           ...
     (0, 7, :, :)  (1, 7, :, :)  (2, 7, :, :)  (3, 7, :, :)
     """
-    if cspad_ijkl.shape != cspad_geom_shape :
+    if cspad_ij.shape != cspad_geom_shape :
         raise ValueError('cspad input is not the required shape:' + str(cspad_geom_shape) )
     
     cspad_ijkl = np.zeros(cspad_psana_shape, dtype=cspad_ij.dtype)

@@ -70,16 +70,26 @@ def edges(shape, pad = 0):
 
 class Application:
     def __init__(self, cspad, geom_fnam = None, mask = None):
-        self.cspad = cspad
-        self.mask  = np.ones_like(cspad, dtype=np.bool)
+        # check if the cspad is psana shaped
+        if cspad.shape == (4, 8, 185, 388) :
+            self.cspad = gf.ijkl_to_ss_fs(cspad)
+            self.cspad_shape_flag = 'psana'
+        elif cspad.shape == (4 * 8, 185, 388) :
+            self.cspad = gf.ijkl_to_ss_fs(cspad.reshape((4,8,185, 388)))
+            self.cspad_shape_flag = 'psana2'
+        elif cspad.shape == (1480, 1552):
+            self.cspad_shape_flag = 'slab'
+            self.cspad = cspad
+            
+        self.mask  = np.ones_like(self.cspad, dtype=np.bool)
         self.geom_fnam = geom_fnam
 
         if self.geom_fnam is not None :
             self.pixel_maps, self.cspad_shape = gf.get_ij_slab_shaped(self.geom_fnam)
-            i, j = np.meshgrid(range(cspad.shape[0]), range(cspad.shape[1]), indexing='ij')
+            i, j = np.meshgrid(range(self.cspad.shape[0]), range(self.cspad.shape[1]), indexing='ij')
             self.ss_geom = gf.apply_geom(self.geom_fnam, i)
             self.fs_geom = gf.apply_geom(self.geom_fnam, j)
-            self.cspad_geom = np.zeros(self.cspad_shape, dtype=cspad.dtype)
+            self.cspad_geom = np.zeros(self.cspad_shape, dtype=self.cspad.dtype)
             self.mask_geom  = np.zeros(self.cspad_shape, dtype=np.bool)
             #
             self.background = np.where(np.fliplr(gf.apply_geom(self.geom_fnam, np.ones_like(self.mask)).astype(np.bool).T) == False)
@@ -164,10 +174,20 @@ class Application:
     def save_mask(self):
         print 'updating mask...'
         self.generate_mask()
+
+        if self.cspad_shape_flag == 'psana' :
+            print 'shifting back to original cspad shape:', self.cspad_shape_flag
+            mask = gf.ss_fs_to_ijkl(self.mask)
+        elif self.cspad_shape_flag == 'psana2' : 
+            print 'shifting back to original cspad shape:', self.cspad_shape_flag
+            mask = gf.ss_fs_to_ijkl(self.mask)
+            mask = mask.reshape((32, 185, 388))
+        elif self.cspad_shape_flag == 'slab' :
+        	mask = self.mask
         
-        print 'outputing mask as np.int16 (h5py does not support boolian arrays yet)...'
+        print 'outputing mask as np.int16 (h5py does not support boolean arrays yet)...'
         f = h5py.File('mask.h5', 'w')
-        f.create_dataset('/data/data', data = self.mask.astype(np.int16))
+        f.create_dataset('/data/data', data = mask.astype(np.int16))
         f.close()
         print 'Done!'
         
@@ -304,7 +324,7 @@ class Application:
 
         # mouse hover ij value label
         ij_label = QtGui.QLabel()
-        disp = 'ss fs {0:5} {1:5}   value {2:6}'.format('-', '-', '-')
+        disp = 'ss fs {0:5} {1:5}   value {2:2}'.format('-', '-', '-')
         ij_label.setText(disp)
         self.plot.scene.sigMouseMoved.connect( lambda pos: self.mouseMoved(ij_label, pos) )
 
@@ -325,7 +345,7 @@ class Application:
         layout.addWidget(edges_checkbox, 6, 0)          # bottom-left
         layout.addWidget(self.plot, 0, 1, 7, 1)         # plot goes on right side, spanning 3 rows
         layout.setColumnStretch(1, 1)
-        layout.setColumnMinimumWidth(0, 200)
+        layout.setColumnMinimumWidth(0, 250)
         
         # display the image
         self.generate_mask()
@@ -350,11 +370,13 @@ class Application:
         if self.geom_fnam is not None :
             ij = [self.cspad_shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
             if (0 <= ij[0] < self.cspad_shape[0]) and (0 <= ij[1] < self.cspad_shape[1]):
-                ij_label.setText('ss fs value: ' + str(self.ss_geom[ij[0], ij[1]]).rjust(5) + str(self.fs_geom[ij[0], ij[1]]).rjust(5) + str(self.cspad_geom[ij[0], ij[1]]).rjust(8) )
+#                ij_label.setText('ss fs value: ' + str(self.ss_geom[ij[0], ij[1]]).rjust(5) + str(self.fs_geom[ij[0], ij[1]]).rjust(5) + str(self.cspad_geom[ij[0], ij[1]]).rjust(8) )
+                ij_label.setText('ss fs value: %d %d %.2e' % (self.ss_geom[ij[0], ij[1]], self.fs_geom[ij[0], ij[1]], self.cspad_geom[ij[0], ij[1]]) )
         else :
             ij = [self.cspad.shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
             if (0 <= ij[0] < self.cspad.shape[0]) and (0 <= ij[1] < self.cspad.shape[1]):
-                ij_label.setText('ss fs value: ' + str(ij[0]).rjust(5) + str(ij[1]).rjust(5) + str(self.cspad[ij[0], ij[1]]).rjust(8) )
+                ij_label.setText('ss fs value: %d %d %.2e' % (self.ss_geom[ij[0], ij[1]], self.fs_geom[ij[0], ij[1]], self.cspad_geom[ij[0], ij[1]]) )
+#                ij_label.setText('ss fs value: ' + str(ij[0]).rjust(5) + str(ij[1]).rjust(5) + str(self.cspad[ij[0], ij[1]]).rjust(8) )
 
     def mouseClicked(self, plot, click):
         if click.button() == 1:
