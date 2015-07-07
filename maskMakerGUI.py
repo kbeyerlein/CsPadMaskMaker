@@ -209,7 +209,14 @@ class Application:
             j2 = self.fs_geom[coords[:,0], coords[:,1]]
             
             m = self.mask_clicked[0, 0]
-            self.mask_clicked[i2, j2] = False
+            
+            if self.toggle_checkbox.isChecked():
+                self.mask_clicked[i2, j2] = ~self.mask_clicked[i2, j2]
+            elif self.mask_checkbox.isChecked():
+                self.mask_clicked[i2, j2] = False
+            elif self.unmask_checkbox.isChecked():
+                self.mask_clicked[i2, j2] = True
+            
             self.mask_clicked[0, 0] = m
             
             self.generate_mask()
@@ -225,7 +232,12 @@ class Application:
                      (coords[:,1] >= 0) &
                      (coords[:,1] < self.mask_clicked.shape[1])]
             
-            self.mask_clicked[coords[:,0], coords[:,1]] = False
+            if self.toggle_checkbox.isChecked():
+                self.mask_clicked[coords[:,0], coords[:,1]] = ~self.mask_clicked[coords[:,0], coords[:,1]]
+            elif self.mask_checkbox.isChecked():
+                self.mask_clicked[coords[:,0], coords[:,1]] = False
+            elif self.unmask_checkbox.isChecked():
+                self.mask_clicked[coords[:,0], coords[:,1]] = True
             
             self.generate_mask()
             self.updateDisplayRGB()
@@ -251,7 +263,14 @@ class Application:
             j2 = self.fs_geom[coords[:,0], coords[:,1]]
             
             m = self.mask_clicked[0, 0]
-            self.mask_clicked[i2, j2] = False
+            
+            if self.toggle_checkbox.isChecked():
+                self.mask_clicked[i2, j2] = ~self.mask_clicked[i2, j2]
+            elif self.mask_checkbox.isChecked():
+                self.mask_clicked[i2, j2] = False
+            elif self.unmask_checkbox.isChecked():
+                self.mask_clicked[i2, j2] = True
+            
             self.mask_clicked[0, 0] = m
             
             self.generate_mask()
@@ -267,7 +286,12 @@ class Application:
                      (coords[:,1] >= 0) &
                      (coords[:,1] < self.mask_clicked.shape[1])]
             
-            self.mask_clicked[coords[:,0], coords[:,1]] = False
+            if self.toggle_checkbox.isChecked():
+                self.mask_clicked[coords[:,0], coords[:,1]] = ~self.mask_clicked[coords[:,0], coords[:,1]]
+            elif self.mask_checkbox.isChecked():
+                self.mask_clicked[coords[:,0], coords[:,1]] = False
+            elif self.unmask_checkbox.isChecked():
+                self.mask_clicked[coords[:,0], coords[:,1]] = True
             
             self.generate_mask()
             self.updateDisplayRGB()
@@ -275,8 +299,16 @@ class Application:
     def mask_hist(self):
         min_max = self.plot.getHistogramWidget().item.getLevels()
         
-        self.mask_clicked[np.where(self.cspad < min_max[0])] = False
-        self.mask_clicked[np.where(self.cspad > min_max[1])] = False
+        if self.toggle_checkbox.isChecked():
+            self.mask_clicked[np.where(self.cspad < min_max[0])] = ~self.mask_clicked[np.where(self.cspad < min_max[0])]
+            self.mask_clicked[np.where(self.cspad > min_max[1])] = ~self.mask_clicked[np.where(self.cspad > min_max[1])]
+        elif self.mask_checkbox.isChecked():
+            self.mask_clicked[np.where(self.cspad < min_max[0])] = False
+            self.mask_clicked[np.where(self.cspad > min_max[1])] = False
+        elif self.unmask_checkbox.isChecked():
+            self.mask_clicked[np.where(self.cspad < min_max[0])] = True
+            self.mask_clicked[np.where(self.cspad > min_max[1])] = True
+        
         self.generate_mask()
         self.updateDisplayRGB()
 
@@ -289,6 +321,10 @@ class Application:
 
         # 2D plot for the cspad and mask
         self.plot = pg.ImageView()
+
+        # save mask button
+        save_button = QtGui.QPushButton('save mask')
+        save_button.clicked.connect(self.save_mask)
 
         # rectangular ROI selection
         self.roi = pg.RectROI([-200,-200], [100, 100])
@@ -308,24 +344,32 @@ class Application:
         hist_button = QtGui.QPushButton('mask outside histogram')
         hist_button.clicked.connect(self.mask_hist)
 
-        # unbonded pixels checkbox
-        unbonded_checkbox = QtGui.QCheckBox('unbonded pixels')
-        unbonded_checkbox.stateChanged.connect( self.update_mask_unbonded )
-
-        # asic edges checkbox
-        edges_checkbox = QtGui.QCheckBox('asic edges')
-        edges_checkbox.stateChanged.connect( self.update_mask_edges )
-
-        # save mask button
-        save_button = QtGui.QPushButton('save mask')
-        save_button.clicked.connect(self.save_mask)
-
+        # toggle / mask / unmask checkboxes
+        self.toggle_checkbox   = QtGui.QCheckBox('toggle')
+        self.mask_checkbox     = QtGui.QCheckBox('mask')
+        self.unmask_checkbox   = QtGui.QCheckBox('unmask')
+        self.toggle_checkbox.setChecked(True)   
+        
+        toggle_group           = QtGui.QButtonGroup()#"masking behaviour")
+        toggle_group.addButton(self.toggle_checkbox)   
+        toggle_group.addButton(self.mask_checkbox)   
+        toggle_group.addButton(self.unmask_checkbox)   
+        toggle_group.setExclusive(True)
+        
         # mouse hover ij value label
         ij_label = QtGui.QLabel()
         disp = 'ss fs {0:5} {1:5}   value {2:2}'.format('-', '-', '-')
         ij_label.setText(disp)
         self.plot.scene.sigMouseMoved.connect( lambda pos: self.mouseMoved(ij_label, pos) )
-
+        
+        # unbonded pixels checkbox
+        unbonded_checkbox = QtGui.QCheckBox('unbonded pixels')
+        unbonded_checkbox.stateChanged.connect( self.update_mask_unbonded )
+        
+        # asic edges checkbox
+        edges_checkbox = QtGui.QCheckBox('asic edges')
+        edges_checkbox.stateChanged.connect( self.update_mask_edges )
+        
         # mouse click mask 
         self.plot.scene.sigMouseClicked.connect( lambda click: self.mouseClicked(self.plot, click) )
 
@@ -338,10 +382,13 @@ class Application:
         layout.addWidget(ROI_button, 1, 0)              # upper-left
         layout.addWidget(ROI_circle_button, 2, 0)       # upper-left
         layout.addWidget(hist_button, 3, 0)             # upper-left
-        layout.addWidget(ij_label, 4, 0)                # upper-left
-        layout.addWidget(unbonded_checkbox, 5, 0)       # middle-left
-        layout.addWidget(edges_checkbox, 6, 0)          # bottom-left
-        layout.addWidget(self.plot, 0, 1, 7, 1)         # plot goes on right side, spanning 3 rows
+        layout.addWidget(self.toggle_checkbox, 4, 0)    # upper-left
+        layout.addWidget(self.mask_checkbox, 5, 0)      # upper-left
+        layout.addWidget(self.unmask_checkbox, 6, 0)    # upper-left
+        layout.addWidget(ij_label, 7, 0)                # upper-left
+        layout.addWidget(unbonded_checkbox, 8, 0)       # middle-left
+        layout.addWidget(edges_checkbox, 9, 0)          # bottom-left
+        layout.addWidget(self.plot, 0, 1, 9, 1)         # plot goes on right side, spanning 3 rows
         layout.setColumnStretch(1, 1)
         layout.setColumnMinimumWidth(0, 250)
         
@@ -373,7 +420,7 @@ class Application:
         else :
             ij = [self.cspad.shape[0] - 1 - int(img.mapFromScene(pos).y()), int(img.mapFromScene(pos).x())] # ss, fs
             if (0 <= ij[0] < self.cspad.shape[0]) and (0 <= ij[1] < self.cspad.shape[1]):
-                ij_label.setText('ss fs value: %d %d %.2e' % (self.ss_geom[ij[0], ij[1]], self.fs_geom[ij[0], ij[1]], self.cspad_geom[ij[0], ij[1]]) )
+                ij_label.setText('ss fs value: %d %d %.2e' % (ij[0], ij[1], self.cspad[ij[0], ij[1]]) )
 #                ij_label.setText('ss fs value: ' + str(ij[0]).rjust(5) + str(ij[1]).rjust(5) + str(self.cspad[ij[0], ij[1]]).rjust(8) )
 
     def mouseClicked(self, plot, click):
@@ -390,8 +437,15 @@ class Application:
                     if i == 0 and j == 0 and i1 != 0 and j1 != 0 :
                         return 
                     else :
-                        self.mask_clicked[i, j] = ~self.mask_clicked[i, j]
-                        self.mask[i, j]         = ~self.mask[i, j]
+                        if self.toggle_checkbox.isChecked():
+                            self.mask_clicked[i, j] = ~self.mask_clicked[i, j]
+                            self.mask[i, j]         = ~self.mask[i, j]
+                        elif self.mask_checkbox.isChecked():
+                            self.mask_clicked[i, j] = False
+                            self.mask[i, j]         = False
+                        elif self.unmask_checkbox.isChecked():
+                            self.mask_clicked[i, j] = True
+                            self.mask[i, j]         = True
                         
                         if self.mask[i, j] :
                             self.display_RGB[j0, i0, :] = np.array([1,1,1]) * self.cspad[i, j]
@@ -403,8 +457,15 @@ class Application:
                 i1 = self.cspad.shape[0] - 1 - i0 # array ss (with the fliplr and .T)
                 j1 = j0                           # array fs (with the fliplr and .T)
                 if (0 <= i1 < self.cspad.shape[0]) and (0 <= j1 < self.cspad.shape[1]):
-                    self.mask_clicked[i1, j1] = ~self.mask_clicked[i1, j1]
-                    self.mask[i1, j1]         = ~self.mask[i1, j1]
+                    if self.toggle_checkbox.isChecked():
+                        self.mask_clicked[i1, j1] = ~self.mask_clicked[i1, j1]
+                        self.mask[i1, j1]         = ~self.mask[i1, j1]
+                    elif self.mask_checkbox.isChecked():
+                        self.mask_clicked[i1, j1] = False
+                        self.mask[i1, j1]         = False
+                    elif self.unmask_checkbox.isChecked():
+                        self.mask_clicked[i1, j1] = True
+                        self.mask[i1, j1]         = True
                     if self.mask[i1, j1] :
                         self.display_RGB[j0, i0, :] = np.array([1,1,1]) * self.cspad[i1, j1]
                     else :
