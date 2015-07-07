@@ -334,7 +334,7 @@ class Application:
         ROI_button.clicked.connect(lambda : self.mask_ROI(self.roi))
 
         # circular ROI selection
-        self.roi_circle = pg.CircleROI([-200,200], [100, 100])
+        self.roi_circle = pg.CircleROI([-200,200], [101, 101])
         self.plot.addItem(self.roi_circle)
         self.roi.setZValue(10)                       # make sure ROI is drawn above image
         ROI_circle_button = QtGui.QPushButton('mask circular ROI')
@@ -403,6 +403,9 @@ class Application:
 
         dump(self.plot.getHistogramWidget())
         """
+        # centre the circle initially 
+        if self.geom_fnam is not None :
+            self.roi_circle.setPos([self.cspad_shape[0]/2 - 1 - 50, self.cspad_shape[1]/2 - 1 - 50])
 
         ## Display the widget as a new window
         w.show()
