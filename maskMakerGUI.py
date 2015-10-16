@@ -80,6 +80,10 @@ class Application:
         elif cspad.shape == (1480, 1552):
             self.cspad_shape_flag = 'slab'
             self.cspad = cspad
+        else :
+            # this is not in fact a cspad image
+            self.cspad_shape_flag = 'other'
+            self.cspad = cspad
             
         self.mask  = np.ones_like(self.cspad, dtype=np.bool)
         self.geom_fnam = geom_fnam
@@ -183,7 +187,9 @@ class Application:
             mask = gf.ss_fs_to_ijkl(self.mask)
             mask = mask.reshape((32, 185, 388))
         elif self.cspad_shape_flag == 'slab' :
-        	mask = self.mask
+            mask = self.mask
+        elif self.cspad_shape_flag == 'other' :
+            mask = self.mask
         
         print 'outputing mask as np.int16 (h5py does not support boolean arrays yet)...'
         f = h5py.File('mask.h5', 'w')
@@ -365,10 +371,14 @@ class Application:
         # unbonded pixels checkbox
         unbonded_checkbox = QtGui.QCheckBox('unbonded pixels')
         unbonded_checkbox.stateChanged.connect( self.update_mask_unbonded )
+        if self.cspad_shape_flag == 'other' :
+            unbonded_checkbox.setEnabled(False)
         
         # asic edges checkbox
         edges_checkbox = QtGui.QCheckBox('asic edges')
         edges_checkbox.stateChanged.connect( self.update_mask_edges )
+        if self.cspad_shape_flag == 'other' :
+            edges_checkbox.setEnabled(False)
         
         # mouse click mask 
         self.plot.scene.sigMouseClicked.connect( lambda click: self.mouseClicked(self.plot, click) )
