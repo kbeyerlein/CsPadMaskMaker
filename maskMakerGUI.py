@@ -510,7 +510,7 @@ if __name__ == '__main__':
         else :
             path = '/data/data'
         f = h5py.File(args.mask, 'r')
-        mask = f[path].value
+        mask = f[path].value.astype(np.bool)
         f.close()
     else :
         mask = None
