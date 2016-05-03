@@ -47,7 +47,7 @@ def unbonded_pixels():
     return mask_pad
 
 def asic_edges(arrayin = None, pad = 0):
-    mask_edges = np.ones(cspad_geom_shape)
+    mask_edges = np.ones(cspad_geom_shape, dtype=np.bool)
     mask_edges[:: 185, :] = 0
     mask_edges[184 :: 185, :] = 0
     mask_edges[:, :: 194] = 0
@@ -97,6 +97,13 @@ class Application:
             self.mask_geom  = np.zeros(self.cspad_shape, dtype=np.bool)
             #
             self.background = np.where(np.fliplr(gf.apply_geom(self.geom_fnam, np.ones_like(self.mask)).astype(np.bool).T) == False)
+            # 
+            # get the xy coords as a slab
+            self.y_map, self.x_map = gf.make_yx_from_1480_1552(geom_fnam)
+        else :
+            i, j = np.meshgrid(range(self.cspad.shape[0]), range(self.cspad.shape[1]), indexing='ij')
+            self.y_map, self.x_map = (i-self.cspad.shape[0]/2, j-self.cspad.shape[1]/2)
+            self.cspad_shape = self.cspad.shape
 
         self.mask_edges    = False
         self.mask_unbonded = False
@@ -198,109 +205,44 @@ class Application:
         print 'Done!'
         
     def mask_ROI(self, roi):
-        a = roi.getArrayRegion(self.display_RGB[:,:,0], self.plot.getImageItem(), returnMappedCoords=True)
-        
-        if self.geom_fnam is not None :
-            i1 = np.rint(self.cspad_shape[0] - 1 - a[1][1]).astype(np.int) # array ss (with the fliplr and .T)
-            j1 = np.rint(a[1][0]).astype(np.int)                           # array fs (with the fliplr and .T)
-            
-            coords = np.array([i1.flatten(), j1.flatten()]).transpose()
-            coords = coords[
-                     (coords[:,0] >= 0) & 
-                     (coords[:,0] < self.ss_geom.shape[0]) & 
-                     (coords[:,1] >= 0) &
-                     (coords[:,1] < self.ss_geom.shape[1])]
-            
-            i2 = self.ss_geom[coords[:,0], coords[:,1]]
-            j2 = self.fs_geom[coords[:,0], coords[:,1]]
-            
-            m = self.mask_clicked[0, 0]
-            
-            if self.toggle_checkbox.isChecked():
-                self.mask_clicked[i2, j2] = ~self.mask_clicked[i2, j2]
-            elif self.mask_checkbox.isChecked():
-                self.mask_clicked[i2, j2] = False
-            elif self.unmask_checkbox.isChecked():
-                self.mask_clicked[i2, j2] = True
-            
-            self.mask_clicked[0, 0] = m
-            
-            self.generate_mask()
-            self.updateDisplayRGB()
-        else :
-            i1 = np.rint(self.cspad.shape[0] - 1 - a[1][1]).astype(np.int) # array ss (with the fliplr and .T)
-            j1 = np.rint(a[1][0]).astype(np.int)                           # array fs (with the fliplr and .T)
-            
-            coords = np.array([i1.flatten(), j1.flatten()]).transpose()
-            coords = coords[
-                     (coords[:,0] >= 0) & 
-                     (coords[:,0] < self.mask_clicked.shape[0]) & 
-                     (coords[:,1] >= 0) &
-                     (coords[:,1] < self.mask_clicked.shape[1])]
-            
-            if self.toggle_checkbox.isChecked():
-                self.mask_clicked[coords[:,0], coords[:,1]] = ~self.mask_clicked[coords[:,0], coords[:,1]]
-            elif self.mask_checkbox.isChecked():
-                self.mask_clicked[coords[:,0], coords[:,1]] = False
-            elif self.unmask_checkbox.isChecked():
-                self.mask_clicked[coords[:,0], coords[:,1]] = True
-            
-            self.generate_mask()
-            self.updateDisplayRGB()
-    
-    def mask_ROI_circle(self, roi):
-        i0, j0 = np.meshgrid(range(int(roi.size()[0])), range(int(roi.size()[1])), indexing = 'ij')
-        r = np.sqrt((i0 - roi.size()[0]/2).astype(np.float)**2 + (j0 - roi.size()[0]/2).astype(np.float)**2)
-        i0 = np.rint(i0[np.where(r < roi.size()[1]/2.)] + roi.pos()[1]).astype(np.int)
-        j0 = np.rint(j0[np.where(r < roi.size()[0]/2.)] + roi.pos()[0]).astype(np.int)
+        sides   = [roi.size()[1], roi.size()[0]]
+        courner = [self.cspad_shape[0]/2. - roi.pos()[1], \
+                   roi.pos()[0] - self.cspad_shape[1]/2.]
+
+        top_left     = [np.rint(courner[0]) - 1, np.rint(courner[1])]
+        bottom_right = [np.rint(courner[0] - sides[0]), np.rint(courner[1] + sides[1]) - 1]
 
         if self.geom_fnam is not None :
-            i1 = np.rint(self.cspad_shape[0] - 1 - i0).astype(np.int) # array ss (with the fliplr and .T)
-            j1 = np.rint(j0).astype(np.int)                           # array fs (with the fliplr and .T)
-            
-            coords = np.array([i1.flatten(), j1.flatten()]).transpose()
-            coords = coords[
-                     (coords[:,0] >= 0) & 
-                     (coords[:,0] < self.ss_geom.shape[0]) & 
-                     (coords[:,1] >= 0) &
-                     (coords[:,1] < self.ss_geom.shape[1])]
-            
-            i2 = self.ss_geom[coords[:,0], coords[:,1]]
-            j2 = self.fs_geom[coords[:,0], coords[:,1]]
-            
-            m = self.mask_clicked[0, 0]
-            
-            if self.toggle_checkbox.isChecked():
-                self.mask_clicked[i2, j2] = ~self.mask_clicked[i2, j2]
-            elif self.mask_checkbox.isChecked():
-                self.mask_clicked[i2, j2] = False
-            elif self.unmask_checkbox.isChecked():
-                self.mask_clicked[i2, j2] = True
-            
-            self.mask_clicked[0, 0] = m
-            
-            self.generate_mask()
-            self.updateDisplayRGB()
-        else :
-            i1 = np.rint(self.cspad.shape[0] - 1 - i0).astype(np.int) # array ss (with the fliplr and .T)
-            j1 = np.rint(j0).astype(np.int)                           # array fs (with the fliplr and .T)
-            
-            coords = np.array([i1.flatten(), j1.flatten()]).transpose()
-            coords = coords[
-                     (coords[:,0] >= 0) & 
-                     (coords[:,0] < self.mask_clicked.shape[0]) & 
-                     (coords[:,1] >= 0) &
-                     (coords[:,1] < self.mask_clicked.shape[1])]
-            
-            if self.toggle_checkbox.isChecked():
-                self.mask_clicked[coords[:,0], coords[:,1]] = ~self.mask_clicked[coords[:,0], coords[:,1]]
-            elif self.mask_checkbox.isChecked():
-                self.mask_clicked[coords[:,0], coords[:,1]] = False
-            elif self.unmask_checkbox.isChecked():
-                self.mask_clicked[coords[:,0], coords[:,1]] = True
-            
-            self.generate_mask()
-            self.updateDisplayRGB()
+            # why?
+            top_left[0]     += 2
+            bottom_right[1] += 1
+            bottom_right[0] += 1
+        
+        y_in_rect = (self.y_map <= top_left[0]) & (self.y_map >= bottom_right[0])
+        x_in_rect = (self.x_map >= top_left[1]) & (self.x_map <= bottom_right[1])
+        i2, j2 = np.where( y_in_rect & x_in_rect )
+        self.apply_ROI(i2, j2)
+
+    def mask_ROI_circle(self, roi):
+        # get the xy coords of the centre and the radius
+        rad    = roi.size()[0]/2. + 0.5
+        centre = [self.cspad_shape[0]/2. - roi.pos()[1] - rad, \
+                  roi.pos()[0] + rad - self.cspad_shape[1]/2.]
+        
+        r_map = np.sqrt((self.y_map-centre[0])**2 + (self.x_map-centre[1])**2)
+        i2, j2 = np.where( r_map <= rad )
+        self.apply_ROI(i2, j2)
+
+    def apply_ROI(self, i2, j2):
+        if self.toggle_checkbox.isChecked():
+            self.mask_clicked[i2, j2] = ~self.mask_clicked[i2, j2]
+        elif self.mask_checkbox.isChecked():
+            self.mask_clicked[i2, j2] = False
+        elif self.unmask_checkbox.isChecked():
+            self.mask_clicked[i2, j2] = True
+        
+        self.generate_mask()
+        self.updateDisplayRGB()
     
     def mask_hist(self):
         min_max = self.plot.getHistogramWidget().item.getLevels()
@@ -406,13 +348,6 @@ class Application:
         self.generate_mask()
         self.updateDisplayRGB(auto = True)
 
-        """
-        def dump(obj):
-          for attr in dir(obj):
-            print "obj.%s = %s" % (attr, getattr(obj, attr))
-
-        dump(self.plot.getHistogramWidget())
-        """
         # centre the circle initially 
         if self.geom_fnam is not None :
             self.roi_circle.setPos([self.cspad_shape[0]/2 - 1 - 50, self.cspad_shape[1]/2 - 1 - 50])

@@ -248,7 +248,7 @@ def ss_fs_to_ijkl(cspad_ij):
     
     return cspad_ijkl
 
-def make_yx_from_4_8_16_185_388(geom_fnam):
+def make_yx_from_4_8_185_388(geom_fnam):
     # now I want
     x = np.zeros(cspad_psana_shape, dtype=np.float32)
     y = np.zeros(cspad_psana_shape, dtype=np.float32)
@@ -351,7 +351,7 @@ def apply_geom(geom_fnam, cspad_np):
     """
     # check if cspad is "psana" shaped or "CrystFel" shaped
     if cspad_np.shape == (4, 8, 185, 388) :
-        y, x = make_yx_from_4_8_16_185_388(geom_fnam)
+        y, x = make_yx_from_4_8_185_388(geom_fnam)
 
     else :
         x, y = pixel_maps_from_geometry_file(geom_fnam)
@@ -367,7 +367,7 @@ def get_ij_psana_shaped(geom_fnam):
     cspad_geom = np.zeros(NM, dtype=np.int16)
     cspad_geom[ij[0], ij[1]] = cspad_np.flatten()
     """
-    y, x = make_yx_from_4_8_16_185_388(geom_fnam)
+    y, x = make_yx_from_4_8_185_388(geom_fnam)
     
     # find the smallest size of cspad_geom that contains all 
     # xy values but is symmetric about the origin
