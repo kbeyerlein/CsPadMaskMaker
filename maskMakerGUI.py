@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 import argparse
 import h5py
@@ -37,7 +41,7 @@ def unbonded_pixels():
             for a in range(2):
                 for i in range(19):
                     mask[q, p, i * 10, i * 10] = 0
-                    mask[q, p, i * 10, i * 10 + cspad_psana_shape[-1]/2] = 0
+                    mask[q, p, i * 10, i * 10 + cspad_psana_shape[-1]//2] = 0
 
     mask_slab = ijkl_to_ss_fs(mask)
 
@@ -102,7 +106,7 @@ class Application:
             self.y_map, self.x_map = gf.make_yx_from_1480_1552(geom_fnam)
         else :
             i, j = np.meshgrid(range(self.cspad.shape[0]), range(self.cspad.shape[1]), indexing='ij')
-            self.y_map, self.x_map = (i-self.cspad.shape[0]/2, j-self.cspad.shape[1]/2)
+            self.y_map, self.x_map = (i-self.cspad.shape[0]//2, j-self.cspad.shape[1]//2)
             self.cspad_shape = self.cspad.shape
 
         self.mask_edges    = False
@@ -162,10 +166,10 @@ class Application:
 
     def update_mask_unbonded(self, state):
         if state > 0 :
-            print 'adding unbonded pixels to the mask'
+            print('adding unbonded pixels to the mask')
             self.mask_unbonded = True
         else :
-            print 'removing unbonded pixels from the mask'
+            print('removing unbonded pixels from the mask')
             self.mask_unbonded = False
         
         self.generate_mask()
@@ -173,24 +177,24 @@ class Application:
 
     def update_mask_edges(self, state):
         if state > 0 :
-            print 'adding asic edges to the mask'
+            print('adding asic edges to the mask')
             self.mask_edges = True
         else :
-            print 'removing asic edges from the mask'
+            print('removing asic edges from the mask')
             self.mask_edges = False
         
         self.generate_mask()
         self.updateDisplayRGB()
 
     def save_mask(self):
-        print 'updating mask...'
+        print('updating mask...')
         self.generate_mask()
 
         if self.cspad_shape_flag == 'psana' :
-            print 'shifting back to original cspad shape:', self.cspad_shape_flag
+            print('shifting back to original cspad shape:', self.cspad_shape_flag)
             mask = gf.ss_fs_to_ijkl(self.mask)
         elif self.cspad_shape_flag == 'psana2' : 
-            print 'shifting back to original cspad shape:', self.cspad_shape_flag
+            print('shifting back to original cspad shape:', self.cspad_shape_flag)
             mask = gf.ss_fs_to_ijkl(self.mask)
             mask = mask.reshape((32, 185, 388))
         elif self.cspad_shape_flag == 'slab' :
@@ -198,11 +202,11 @@ class Application:
         elif self.cspad_shape_flag == 'other' :
             mask = self.mask
         
-        print 'outputing mask as np.int16 (h5py does not support boolean arrays yet)...'
+        print('outputing mask as np.int16 (h5py does not support boolean arrays yet)...')
         f = h5py.File('mask.h5', 'w')
         f.create_dataset('/data/data', data = mask.astype(np.int16))
         f.close()
-        print 'Done!'
+        print('Done!')
         
     def mask_ROI(self, roi):
         sides   = [roi.size()[1], roi.size()[0]]
@@ -350,7 +354,7 @@ class Application:
 
         # centre the circle initially 
         if self.geom_fnam is not None :
-            self.roi_circle.setPos([self.cspad_shape[0]/2 - 1 - 50, self.cspad_shape[1]/2 - 1 - 50])
+            self.roi_circle.setPos([self.cspad_shape[0]//2 - 1 - 50, self.cspad_shape[1]//2 - 1 - 50])
 
         ## Display the widget as a new window
         w.show()

@@ -1,3 +1,8 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 import numpy as np
 
 cspad_psana_shape = (4, 8, 185, 388)
@@ -89,7 +94,8 @@ def read_geometry_file(fnam, return_preamble = False):
     f = open(fnam, 'r')
     f_lines = []
     for line in f:
-        f_lines.append(line)
+        if len(line.lstrip()) > 0 and line.lstrip()[0] != ';':
+            f_lines.append(line)
     
     # define the data we want
     shape = (4, 16)                                           # (quadrants, asics)
@@ -189,8 +195,8 @@ def get_ij_slab_shaped(geom_fnam):
     M = 2 * int(max(abs(x.max()), abs(x.min()))) + 2
 
     # convert y x values to i j values
-    i = np.array(y, dtype=np.int) + N/2 - 1
-    j = np.array(x, dtype=np.int) + M/2 - 1
+    i = np.array(y, dtype=np.int) + N//2 - 1
+    j = np.array(x, dtype=np.int) + M//2 - 1
 
     ij = (i.flatten(), j.flatten())
     cspad_geom_shape = (N, M)
@@ -318,8 +324,8 @@ def apply_geom_ij_yx(yx, cspad_np):
     cspad_geom = np.zeros((N, M), dtype=cspad_np.dtype)
 
     # convert y x values to i j values
-    i = np.array(y, dtype=np.int) + N/2 - 1 
-    j = np.array(x, dtype=np.int) + M/2 - 1 
+    i = np.array(y, dtype=np.int) + N//2 - 1 
+    j = np.array(x, dtype=np.int) + M//2 - 1 
 
     # apply geometry
     cspad_geom[i.flatten(), j.flatten()] = cspad_np.flatten()
@@ -375,8 +381,8 @@ def get_ij_psana_shaped(geom_fnam):
     M = 2 * int(max(abs(x.max()), abs(x.min()))) + 2
 
     # convert y x values to i j values
-    i = np.array(y, dtype=np.int) + N/2 - 1 
-    j = np.array(x, dtype=np.int) + M/2 - 1 
+    i = np.array(y, dtype=np.int) + N//2 - 1 
+    j = np.array(x, dtype=np.int) + M//2 - 1 
 
     ij = (i.flatten(), j.flatten())
     cspad_geom_shape = (N, M)
@@ -385,7 +391,7 @@ def get_ij_psana_shaped(geom_fnam):
 def get_corners_ss_fs(q, a, cspad_geom_shape, geom_fnam):
     min_fs, min_ss, max_fs, max_ss, fs, ss, corner_x, corner_y = read_geometry_file(geom_fnam)
 
-    x_asic = cspad_psana_shape[-1] / 2
+    x_asic = cspad_psana_shape[-1] // 2
     y_asic = cspad_psana_shape[-2] 
 
     # make the y-x ( ss, fs ) vectors, using complex notation
@@ -400,8 +406,8 @@ def get_corners_ss_fs(q, a, cspad_geom_shape, geom_fnam):
     y = np.array([r_00.real, r_01.real, r_11.real, r_10.real, r_00.real])
 
     # convert y x values to i j values
-    i = y + cspad_geom_shape[0]/2 - 1 
-    j = x + cspad_geom_shape[1]/2 - 1 
+    i = y + cspad_geom_shape[0]//2 - 1 
+    j = x + cspad_geom_shape[1]//2 - 1 
     return i, j
 
 def polarization_map(geom_fnam, z, polarization_axis = 'x'):
