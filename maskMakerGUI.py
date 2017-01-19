@@ -103,7 +103,8 @@ class Application:
             self.background = np.where(np.fliplr(gf.apply_geom(self.geom_fnam, np.ones_like(self.mask)).astype(np.bool).T) == False)
             # 
             # get the xy coords as a slab
-            self.y_map, self.x_map = gf.make_yx_from_1480_1552(geom_fnam)
+            # self.y_map, self.x_map = gf.make_yx_from_1480_1552(geom_fnam)
+            self.x_map, self.y_map = gf.pixel_maps_from_geometry_file(geom_fnam)
         else :
             i, j = np.meshgrid(range(self.cspad.shape[0]), range(self.cspad.shape[1]), indexing='ij')
             self.y_map, self.x_map = (i-self.cspad.shape[0]//2, j-self.cspad.shape[1]//2)
